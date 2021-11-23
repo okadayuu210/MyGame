@@ -5,14 +5,7 @@
 
 GameCamera::GameCamera()
 {
-	/*
-	//プレイヤーのインスタンスを探す。
-	m_player = FindGO<Player>("player");
-
-	//カメラのニアクリップとファークリップを設定する。
-	g_camera3D->SetNear(1.0f);
-	g_camera3D->SetFar(60000.0f);
-	*/
+	
 }
 
 GameCamera::~GameCamera()

@@ -2,6 +2,7 @@
 #include "BallRed.h"
 
 #include "Player.h"
+#include "Enemy.h"
 
 //CollisionObjectを使用したいので、ファイルをインクルードする。
 #include "collision/CollisionObject.h"
@@ -23,6 +24,8 @@ bool BallRed::Start()
 		35.0f                           //半径。
 	);
 
+	m_collisionObject->SetName("player_ball");
+
 	//コリジョンオブジェクトが自動で削除されないようにする。
 	m_collisionObject->SetIsEnableAutoDelete(false);
 
@@ -33,7 +36,7 @@ bool BallRed::Start()
 	m_moveSpeed *= 1200.0f;
 	m_rotation.AddRotationDegY(360.0f);
 
-	colorState = FindGO<Player>("player")->elementState;
+	m_elementState = FindGO<Player>("player")->GetelementState();
 
 	return true;
 }
@@ -63,15 +66,15 @@ void BallRed::Update()
 	m_collisionObject->SetPosition(m_position);
 
 	//モデルを更新。
-	if (colorState == 0) {
+	if (m_elementState == 0) {
 		m_modelRender0.SetPosition(m_position);
 		m_modelRender0.Update();
 	}
-	else if (colorState == 1) {
+	else if (m_elementState == 1) {
 		m_modelRender1.SetPosition(m_position);
 		m_modelRender1.Update();
 	}
-	else if (colorState == 2) {
+	else if (m_elementState == 2) {
 		m_modelRender2.SetPosition(m_position);
 		m_modelRender2.Update();
 	}
@@ -85,17 +88,23 @@ void BallRed::Update()
 		//自身を削除する。
 		DeleteGO(this);
 	}
+
+	if (FindGO<Enemy>("enemy")->GetBallDelete() == true)
+	{
+		DeleteGO(this);
+	}
+
 }
 
 void BallRed::Render(RenderContext& rc)
 {
-	if (colorState == 0) {
+	if (m_elementState == 0) {
 		m_modelRender0.Draw(rc);
 	}
-	else if (colorState == 1) {
+	else if (m_elementState == 1) {
 		m_modelRender1.Draw(rc);
 	}
-	else if(colorState==2){
+	else if(m_elementState ==2){
 		m_modelRender2.Draw(rc);
 	}
 }

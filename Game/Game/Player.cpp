@@ -1,40 +1,44 @@
 #include "stdafx.h"
 #include "Player.h"
 
-
 #include "BallRed.h"
 
 bool Player::Start()
 {
 	//アニメーションクリップをロードする。
-	animationClips[enAnimationClip_Idle].Load("Assets/animData/idle.tka");
+	animationClips[enAnimationClip_Idle].Load("Assets/animData/player/idle.tka");
 	animationClips[enAnimationClip_Idle].SetLoopFlag(true);
-	animationClips[enAnimationClip_Walk].Load("Assets/animData/walk.tka");
+	animationClips[enAnimationClip_Walk].Load("Assets/animData/player/walk.tka");
 	animationClips[enAnimationClip_Walk].SetLoopFlag(true);
-	animationClips[enAnimationClip_Jump].Load("Assets/animData/jump.tka");
+	animationClips[enAnimationClip_Jump].Load("Assets/animData/player/fall.tka");
 	animationClips[enAnimationClip_Jump].SetLoopFlag(false);
-	
-	//colorState = FindGO<BallRed>(0)->x;
 
+	//モデルを読み込む。
+	m_modelRender.Init("Assets/modelData/character/man.tkm", animationClips, enAnimationClip_Num);
+	
+	m_modelRender.SetScale({Vector3::One*1.9f });
+
+	//sampleStage用
+	//m_position = Vector3(0.0f, -81.0f, 0.0f);
+
+	m_position = Vector3(0.0f, 0.0f, 0.0f);
+	m_rotation.SetRotationDegY(180.0f);
+	m_modelRender.SetRotation(m_rotation);
+	m_charaCon.Init(25.0f, 80.0f, m_position);
+
+	m_modelRender.Update();
+	
 	return true;
 }
 
 Player::Player()
 {
-	//モデルを読み込む。
-	m_modelRender.Init("Assets/modelData/unityChan.tkm",
-		animationClips, enAnimationClip_Num, enModelUpAxisY);
-	//0,40,235
-	m_position = Vector3(0.0f, -81.0f, 0.0f);
-	m_rotation.SetRotationDegY(180.0f);
-	m_modelRender.SetRotation(m_rotation);
-	m_charaCon.Init(25.0f, 75.0f, m_position);
-
+	
 }
 
 Player::~Player()
 {
-
+	DeleteGO(m_redBall);
 }
 
 
@@ -79,15 +83,6 @@ void Player::Move()
 	//XZ成分の移動速度をクリア。
 	m_moveSpeed += cameraForward * lStick_y * 250.0f;	//奥方向への移動速度を加算。
 	m_moveSpeed += cameraRight * lStick_x * 250.0f;		//右方向への移動速度を加算。
-	
-	/*ジャンプ。
-	if (g_pad[0]->IsTrigger(enButtonA) //Aボタンが押されたら
-		&& m_charaCon.IsOnGround()  //かつ、地面に居たら
-		) {
-		//ジャンプする。
-		m_moveSpeed.y = 400.0f;	//上方向に速度を設定して、
-	}
-	*/
 
 	//キャラクターコントローラーを使用して、座標を更新。
 	m_position = m_charaCon.Execute(m_moveSpeed, g_gameTime->GetFrameDeltaTime());
@@ -101,13 +96,11 @@ void Player::Move()
 		//落下処理。
 		//980.0fが最初。
 		m_moveSpeed.y -= 580.0f * g_gameTime->GetFrameDeltaTime();
-		/*元は2.5
-		m_moveSpeed.y -= 4.5f;*/
 	}
 	
 	Vector3 modelPosition = m_position;
 	//ちょっとだけモデルの座標を挙げる。
-	modelPosition.y += 2.5f;
+	//modelPosition.y += 2.5f;
 	m_modelRender.SetPosition(modelPosition);
 }
 
@@ -140,6 +133,7 @@ void Player::Rotation()
 //ステート管理
 void Player::ManageState()
 {
+	
 	if (m_charaCon.IsOnGround() == false)
 	{
 		playerState = 1;
@@ -155,6 +149,7 @@ void Player::ManageState()
 	{
 		playerState = 0;
 	}
+	
 }
 
 void Player::attack()
@@ -162,55 +157,32 @@ void Player::attack()
 	if (g_pad[0]->IsTrigger(enButtonA))
 	{
 		//エレメントボールを作成する。
-		BallRed* redBall = NewGO<BallRed>(0);
+		m_redBall = NewGO<BallRed>(0);
 		RedBallPosition = m_position;
 		//座標を少し上にする。
 		RedBallPosition.y += 70.0f;
+		RedBallPosition.x += 10.0f;
 		//座標を設定する。
-		redBall->SetPosition(RedBallPosition);
-		redBall->SetRotation(m_rotation);
+		m_redBall->SetPosition(RedBallPosition);
+		m_redBall->SetRotation(m_rotation);
 	}
-	/*
-	if (g_pad[0]->IsTrigger(enButtonA) && elementState == 1)
-	{
-		//エレメントボールを作成する。
-		BallGreen* greenBall = NewGO<BallGreen>(0);
-		RedBallPosition = m_position;
-		//座標を少し上にする。
-		RedBallPosition.y += 70.0f;
-		//座標を設定する。
-		greenBall->SetPosition(RedBallPosition);
-		greenBall->SetRotation(m_rotation);
-	}
-
-	if (g_pad[0]->IsTrigger(enButtonA) && elementState == 2)
-	{
-		//エレメントボールを作成する。
-		BallBlue* blueBall = NewGO<BallBlue>(0);
-		RedBallPosition = m_position;
-		//座標を少し上にする。
-		RedBallPosition.y += 70.0f;
-		//座標を設定する。
-		blueBall->SetPosition(RedBallPosition);
-		blueBall->SetRotation(m_rotation);
-	}
-	*/
+	
 }
 
 void Player::attackState()
 {
 	if (g_pad[0]->IsTrigger(enButtonLB1))
 	{
-		switch (elementState)
+		switch (m_elementState)
 		{
 		case 0:
-			elementState = 1;
+			m_elementState = 1;
 			break;
 		case 1:
-			elementState = 2;
+			m_elementState = 2;
 			break;
 		case 2:
-			elementState = 0;
+			m_elementState = 0;
 			break;
 		default:
 			break;

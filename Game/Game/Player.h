@@ -1,15 +1,16 @@
 #pragma once
+
+class BallRed;
+
 class Player:public IGameObject
 {
 public:
 	Player();
-
-	
-//private:
 	bool Start();
 	~Player();
 	void Update();
 	void Render(RenderContext& rc);
+
 	//移動処理
 	void Move();
 	//回転処理
@@ -40,6 +41,12 @@ public:
 		m_rotation = rotation;
 	}
 
+	const int GetelementState() const
+	{
+		return m_elementState;
+	}
+
+private:
 	enum EnAnimationClip {		//アニメーション。
 		enAnimationClip_Idle,
 		enAnimationClip_Walk,
@@ -47,23 +54,22 @@ public:
 		enAnimationClip_Num,
 	};
 
-	AnimationClip animationClips[enAnimationClip_Num];//アニメーションクリップ。
+	AnimationClip animationClips[enAnimationClip_Num];		//アニメーションクリップ。
 
-	ModelRender m_modelRender;              //モデルレンダー。
-	CharacterController m_charaCon;			//キャラクターコントローラー。
-	Vector3 m_moveSpeed;					//移動速度。
-	Quaternion m_rotation;
-	int playerState = 0;
-	Vector3 m_position;						//座標。
-	Vector3	m_forward = Vector3::AxisZ;	    //プレイヤーの正面ベクトル。
+	ModelRender				m_modelRender;					//モデルレンダー。
+	CharacterController		m_charaCon;						//キャラクターコントローラー。
+	Vector3					m_moveSpeed;					//移動速度。
+	Quaternion				m_rotation;						//回転。
+	int						playerState = 0;				//アニメーションのステート。
+	Vector3					m_position;						//座標。
+	Vector3					m_forward = Vector3::AxisZ;		//プレイヤーの正面ベクトル。
 
-	Vector3 RedBallPosition;
-	int elementState = 0;
+	BallRed*				m_redBall;						//弾。
+	Vector3					RedBallPosition;				//ボールの座標。
+	int						m_elementState = 0;				//属性の変更のステート。
 
-
-
-	FontRender fontRenderX;
-	FontRender fontRenderY;
-	FontRender fontRenderZ;
+	FontRender				fontRenderX;					//プレイヤーのX座標表示。
+	FontRender				fontRenderY;					//プレイヤーのY座標表示。
+	FontRender				fontRenderZ;					//プレイヤーのZ座標表示。
 };
 

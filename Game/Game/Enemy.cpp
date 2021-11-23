@@ -6,24 +6,32 @@
 bool Enemy::Start()
 {
 	m_player = FindGO<Player>("player");
+
+	//アニメーションクリップをロードする。
+	animationClips[enAnimationClip_Idle].Load("Assets/animData/blue/idle.tka");
+	animationClips[enAnimationClip_Idle].SetLoopFlag(true);
+	animationClips[enAnimationClip_Walk].Load("Assets/animData/blue/run.tka");
+	animationClips[enAnimationClip_Walk].SetLoopFlag(true);
+	animationClips[enAnimationClip_Hit].Load("Assets/animData/blue/hit.tka");
+	animationClips[enAnimationClip_Hit].SetLoopFlag(false);
+
 	return true;
 }
 
 Enemy::Enemy()
 {
-	//アニメーションクリップをロードする。
-	animationClips[enAnimationClip_Idle].Load("Assets/animData/idle.tka");
-	animationClips[enAnimationClip_Idle].SetLoopFlag(true);
-	animationClips[enAnimationClip_Walk].Load("Assets/animData/walk.tka");
-	animationClips[enAnimationClip_Walk].SetLoopFlag(true);
-	animationClips[enAnimationClip_Jump].Load("Assets/animData/jump.tka");
-	animationClips[enAnimationClip_Jump].SetLoopFlag(false);
+	m_SpriteHPBar.Init("Assets/sprite/HP.dds", 100.0f, 100.0f);
+	m_SpriteHPBar.SetPivot(Vector2(0.0f, 0.5f));
+
+	m_SpriteHPBar.Update();
+	m_hp = m_Maxhp;
 
 	//モデルを読み込む。
-	m_modelRender.Init("Assets/modelData/unityChan.tkm",
-		animationClips, enAnimationClip_Num, enModelUpAxisY);
-	//0,40,235
-	m_position = Vector3(100.0f, -81.0f, 100.0f);
+	m_modelRender.Init("Assets/modelData/Enemy/BlueEnemy.tkm",
+		animationClips, enAnimationClip_Num);
+	m_modelRender.SetScale({ Vector3::One * 1.9f });
+
+	m_position = Vector3(100.0f, 0.0f, 100.0f);
 	m_rotation.SetRotationDegY(180.0f);
 	m_modelRender.SetRotation(m_rotation);
 	m_charaCon.Init(25.0f, 75.0f, m_position);
@@ -44,10 +52,27 @@ void Enemy::Update()
 
 	ManageState();
 
+	Damege();
+
 	PlayAnimation();
+
+	HPcolor();
+
+	Death();
+
+	Vector3 position = m_position;
+	position.x += 10.0f;
+	position.y += 130.0f;
+
+	g_camera3D->CalcScreenPositionFromWorldPosition
+		(m_spritePosition, position);
+	m_SpriteHPBar.SetPosition
+		(Vector3(m_spritePosition.x, m_spritePosition.y, 0.0f));
 
 	//モデルを更新。
 	m_modelRender.Update();
+
+	m_SpriteHPBar.Update();
 }
 
 //移動処理
@@ -56,10 +81,12 @@ void Enemy::Move()
 	m_moveSpeed.x = 0.0f;
 	m_moveSpeed.z = 0.0f;
 
-	Vector3 diff = m_player->GetPosition() - m_position;
-	diff.Normalize();
-	//移動速度を設定する。250
-	m_moveSpeed = diff * 150.0f;
+	if (playerState != 3) {
+		Vector3 diff = m_player->GetPosition() - m_position;
+		diff.Normalize();
+		//移動速度を設定する。250
+		m_moveSpeed = diff * 150.0f;
+	}
 
 	//キャラクターコントローラーを使用して、座標を更新。
 	m_position = m_charaCon.Execute(m_moveSpeed, g_gameTime->GetFrameDeltaTime());
@@ -74,11 +101,8 @@ void Enemy::Move()
 		//980.0fが最初。
 		m_moveSpeed.y -= 580.0f * g_gameTime->GetFrameDeltaTime();
 	}
-
-	Vector3 modelPosition = m_position;
-	//ちょっとだけモデルの座標を挙げる。
-	modelPosition.y += 2.5f;
-	m_modelRender.SetPosition(modelPosition);
+	
+	m_modelRender.SetPosition(m_position);
 }
 
 //回転処理
@@ -110,20 +134,16 @@ void Enemy::Rotation()
 //ステート管理
 void Enemy::ManageState()
 {
-	if (m_charaCon.IsOnGround() == false)
-	{
-		playerState = 1;
+	if (playerState != 3) {
 
-		return;
-	}
-
-	if (fabsf(m_moveSpeed.x) >= 0.001f || fabsf(m_moveSpeed.z) >= 0.001f)
-	{
-		playerState = 2;
-	}
-	else
-	{
-		playerState = 0;
+		if (fabsf(m_moveSpeed.x) >= 0.001f || fabsf(m_moveSpeed.z) >= 0.001f)
+		{
+			playerState = 2;
+		}
+		else
+		{
+			playerState = 0;
+		}
 	}
 }
 
@@ -134,24 +154,89 @@ void Enemy::PlayAnimation()
 	case 0:
 		m_modelRender.PlayAnimation(enAnimationClip_Idle);
 		break;
-
-	case 1:
-		m_modelRender.PlayAnimation(enAnimationClip_Jump);
-		break;
-
 	case 2:
 		m_modelRender.PlayAnimation(enAnimationClip_Walk);
 		break;
-
+	case 3:
+		m_modelRender.PlayAnimation(enAnimationClip_Hit);
+		//アニメーションの再生が終わったら。
+		if (m_modelRender.IsPlayingAnimation() == false)
+		{
+			playerState = 0;
+			m_BallDelete = false;
+		}
+		break;
 	}
 }
 
-void Enemy::Chase()
+void Enemy::Damege()
 {
+	m_elementState = FindGO<Player>("player")->GetelementState();
 
+	//プレイヤーの攻撃用のコリジョンを取得する。
+	const auto& collisions = g_collisionObjectManager->FindCollisionObjects("player_ball");
+	//コリジョンの配列をfor文で回す。
+	for (auto collision : collisions)
+	{
+		//コリジョンとキャラコンが衝突したら。
+		if (collision->IsHit(m_charaCon))
+		{
+			if (playerState != 3) {
+				switch (m_elementState) {
+				case 0:
+					m_BallDelete = true;
+					m_hp -= 1;
+					playerState = 3;
+					break;
+				case 1:
+					m_BallDelete = true;
+					m_hp -= 4;
+					playerState = 3;
+					break;
+				case 2:
+					m_BallDelete = true;
+					m_hp -= 2;
+					playerState = 3;
+					break;
+				}
+			}
+
+		}
+
+	}
+
+	Vector3 scale = Vector3::One;
+	scale.x = float(m_hp) / float(m_Maxhp);
+	m_SpriteHPBar.SetScale(scale);
+}
+
+void Enemy::HPcolor()
+{
+	if (m_hp >= 3) {
+		m_SpriteHPBar.SetMulColor(Vector4(0.0f, 1.0f, 0.0f, 1.0f));
+	}
+	else if (m_hp >= 2) {
+		m_SpriteHPBar.SetMulColor(Vector4(1.0f, 1.0f, 0.0f, 1.0f));
+	}
+	else if (m_hp >= 1) {
+		m_SpriteHPBar.SetMulColor(Vector4(1.0f, 0.0f, 0.0f, 1.0f));
+	}
+	else {
+		m_SpriteHPBar.SetMulColor(Vector4(0.0f, 0.0f, 0.0f, 0.0f));
+	}
+}
+
+void Enemy::Death()
+{
+	if (m_hp <= 0)
+	{
+		m_killcount += 1;
+		DeleteGO(this);
+	}
 }
 
 void Enemy::Render(RenderContext& rc)
 {
 	m_modelRender.Draw(rc);
+	m_SpriteHPBar.Draw(rc);
 }
