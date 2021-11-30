@@ -2,18 +2,30 @@
 #include "Enemy.h"
 
 #include "Player.h"
+#include "collision/CollisionObject.h"
 
 bool Enemy::Start()
 {
 	m_player = FindGO<Player>("player");
 
 	//アニメーションクリップをロードする。
-	animationClips[enAnimationClip_Idle].Load("Assets/animData/blue/idle.tka");
+	animationClips[enAnimationClip_Idle].Load("Assets/animData/enemy/idle.tka");
 	animationClips[enAnimationClip_Idle].SetLoopFlag(true);
-	animationClips[enAnimationClip_Walk].Load("Assets/animData/blue/run.tka");
+	animationClips[enAnimationClip_Walk].Load("Assets/animData/enemy/run.tka");
 	animationClips[enAnimationClip_Walk].SetLoopFlag(true);
-	animationClips[enAnimationClip_Hit].Load("Assets/animData/blue/hit.tka");
+	animationClips[enAnimationClip_Hit].Load("Assets/animData/enemy/hit.tka");
 	animationClips[enAnimationClip_Hit].SetLoopFlag(false);
+	animationClips[enAnimationClip_Attack].Load("Assets/animData/enemy/enemy_attack.tka");
+	animationClips[enAnimationClip_Attack].SetLoopFlag(false);
+
+
+	//アニメーションイベント用の関数を設定する。
+	m_modelRender.AddAnimationEvent([&](const wchar_t* clipName, const wchar_t* eventName) {
+		OnAnimationEvent(clipName, eventName);
+		});
+
+
+	m_punchBoneId = m_modelRender.FindBoneID(L"mixamorig:RightHandMiddle2");
 
 	return true;
 }
@@ -59,6 +71,11 @@ void Enemy::Update()
 	HPcolor();
 
 	Death();
+
+
+
+	attack();
+
 
 	Vector3 position = m_position;
 	position.x += 10.0f;
@@ -135,14 +152,16 @@ void Enemy::Rotation()
 void Enemy::ManageState()
 {
 	if (playerState != 3) {
+		if (playerState != 4) {
 
-		if (fabsf(m_moveSpeed.x) >= 0.001f || fabsf(m_moveSpeed.z) >= 0.001f)
-		{
-			playerState = 2;
-		}
-		else
-		{
-			playerState = 0;
+			if (fabsf(m_moveSpeed.x) >= 0.001f || fabsf(m_moveSpeed.z) >= 0.001f)
+			{
+				playerState = 2;
+			}
+			else
+			{
+				playerState = 0;
+			}
 		}
 	}
 }
@@ -166,6 +185,12 @@ void Enemy::PlayAnimation()
 			m_BallDelete = false;
 		}
 		break;
+	case 4:
+		m_modelRender.PlayAnimation(enAnimationClip_Attack);
+		if(m_modelRender.IsPlayingAnimation() == false)
+		{
+			playerState = 0;
+		}
 	}
 }
 
@@ -234,6 +259,64 @@ void Enemy::Death()
 		DeleteGO(this);
 	}
 }
+
+
+/// </summary>///
+
+void Enemy::attack()
+{
+	Vector3 diff = m_player->GetPosition() - m_position;
+	if (diff.Length() <= 65.0f)
+	{
+		playerState = 4;
+	}
+
+
+	//攻撃判定中であれば。
+	if (m_isUnderAttack == true)
+	{
+		//攻撃用のコリジョンを作成する。
+		//コリジョンオブジェクトを作成する。
+		auto collisionObject = NewGO<CollisionObject>(0);
+
+		Vector3 collisionPosition = m_position;
+		//座標をプレイヤーの少し前に設定する。
+		collisionPosition += m_forward * 50.0f;
+		//球状のコリジョンを作成する。
+		collisionObject->CreateSphere(collisionPosition,        //座標。
+			Quaternion::Identity,                               //回転。
+			10.0f                                               //半径。
+		);
+		collisionObject->SetName("enemy_attack");
+
+		//「Sword」ボーンのワールド行列を取得する。
+		Matrix matrix = m_modelRender.GetBone(m_punchBoneId)->GetWorldMatrix();
+		//「Sword」ボーンのワールド行列をコリジョンに適用する。
+		collisionObject->SetWorldMatrix(matrix);
+	}
+}
+
+
+
+void Enemy::OnAnimationEvent(const wchar_t* clipName, const wchar_t* eventName)
+{
+	//キーの名前が「attack_start」の時。
+	if (wcscmp(eventName, L"attack_start") == 0)
+	{
+		//攻撃中にする。
+		m_isUnderAttack = true;
+	}
+	//キーの名前が「attack_end」の時。
+	else if (wcscmp(eventName, L"attack_end") == 0)
+	{
+		//攻撃を終わる。
+		m_isUnderAttack = false;
+	}
+}
+
+
+///<summary>///
+
 
 void Enemy::Render(RenderContext& rc)
 {

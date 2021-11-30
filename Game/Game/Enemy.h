@@ -25,6 +25,13 @@ public:
 	//気絶処理
 	void Death();
 
+
+
+	void attack();
+	// アニメーションイベント用の関数。
+	void OnAnimationEvent(const wchar_t* clipName, const wchar_t* eventName);
+
+
 	void SetPosition(const Vector3& position)
 	{
 		m_position = position;
@@ -55,6 +62,7 @@ private:
 		enAnimationClip_Idle,
 		enAnimationClip_Walk,
 		enAnimationClip_Hit,
+		enAnimationClip_Attack,
 		enAnimationClip_Num,
 	};
 
@@ -78,4 +86,8 @@ private:
 	SpriteRender			m_SpriteHPBar;				//HPバーの表示。
 	Vector2					m_spritePosition = Vector2::Zero;
 	float					m_latetimer = 0.0f;			//経過時間。
+
+
+	int m_punchBoneId = -1;
+	bool m_isUnderAttack = false;
 };

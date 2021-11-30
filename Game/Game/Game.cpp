@@ -1,25 +1,35 @@
 #include "stdafx.h"
 #include "Game.h"
 #include "Player.h"
-#include "Stage.h"
+#include "Level.h"
 #include "GameCamera.h"
 #include "Enemy.h"
 
 #include "GameOver.h"
 #include "GameClear.h"
 
+#include "RedButton.h"
+#include "GreenButton.h"
+#include "BlueButton.h"
+#include "Door.h"
+#include "Stage.h"
+
 
 bool Game::Start()
 {
 	//“–‚½‚è”»’è‚ð—LŒø‰»‚·‚éB
-	//PhysicsWorld::GetInstance()->EnableDrawDebugWireFrame();
+	PhysicsWorld::GetInstance()->EnableDrawDebugWireFrame();
 
 	return true;
 }
 
 Game::Game()
 {
-	m_stage=NewGO<Stage>(0, "stage");
+	m_level=NewGO<Level>(0, "level");
+
+	//////////////////////////////
+
+
 	m_player=NewGO<Player>(0, "player");
 	m_gamecamera=NewGO<GameCamera>(0, "GameCamera");
 	m_enemy = NewGO<Enemy>(0, "enemy");
@@ -34,7 +44,7 @@ Game::Game()
 
 Game::~Game()
 {
-	DeleteGO(m_stage);
+	DeleteGO(m_level);
 	DeleteGO(m_player);
 	DeleteGO(m_gamecamera);
 

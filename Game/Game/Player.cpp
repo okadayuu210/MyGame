@@ -18,9 +18,6 @@ bool Player::Start()
 	
 	m_modelRender.SetScale({Vector3::One*1.9f });
 
-	//sampleStage—p
-	//m_position = Vector3(0.0f, -81.0f, 0.0f);
-
 	m_position = Vector3(0.0f, 0.0f, 0.0f);
 	m_rotation.SetRotationDegY(180.0f);
 	m_modelRender.SetRotation(m_rotation);

@@ -4,7 +4,7 @@
 
 //classの呼び出し。
 class Player;
-class Stage;
+class Level;
 class GameCamera;
 class Enemy;
 
@@ -22,7 +22,7 @@ public:
 private:
 	//属性の表示。
 	Player*			m_player;										//プレイヤー。
-	Stage*			m_stage;										//背景。
+	Level*			m_level;										//背景。
 	GameCamera*		m_gamecamera;									//ゲームカメラ。
 	Enemy*			m_enemy;										//敵。
 
@@ -39,5 +39,7 @@ private:
 
 
 	FontRender		m_fontRender;
+
+	LevelRender		m_levelRender;
 };
 
